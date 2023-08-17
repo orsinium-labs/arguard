@@ -15,7 +15,7 @@ type Package struct {
 	funcs []Function
 }
 
-func Extract(pkgName PackageName) (*Package, error) {
+func PackageFromName(pkgName PackageName) (*Package, error) {
 	loadMode := (packages.NeedName |
 		packages.NeedSyntax |
 		packages.NeedDeps |
@@ -32,9 +32,12 @@ func Extract(pkgName PackageName) (*Package, error) {
 	if len(pkgs) > 1 {
 		return nil, fmt.Errorf("loaded %d packages, expected 1", len(pkgs))
 	}
-	pkg := pkgs[0]
+	return PackageFromFiles(pkgName, pkgs[0].Syntax)
+}
+
+func PackageFromFiles(pkgName PackageName, files []*ast.File) (*Package, error) {
 	funcs := make([]Function, 0)
-	for _, astFile := range pkg.Syntax {
+	for _, astFile := range files {
 		funcs = append(funcs, extractFile(astFile)...)
 	}
 	return &Package{Name: pkgName, funcs: funcs}, nil

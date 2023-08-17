@@ -2,6 +2,7 @@ package gosafe
 
 import (
 	"flag"
+	"fmt"
 	"go/ast"
 
 	"golang.org/x/tools/go/analysis"
@@ -17,8 +18,18 @@ func NewAnalyzer() *analysis.Analyzer {
 	}
 }
 
+// run is the entry point for the analyzer
 func run(pass *analysis.Pass) (any, error) {
+	// create packages registry and load analyzed package into it
 	pkgs := NewPackages()
+	name := PackageName(pass.Pkg.Name())
+	pkg, err := PackageFromFiles(name, pass.Files)
+	if err != nil {
+		return nil, fmt.Errorf("read contracts from the package: %v", err)
+	}
+	pkgs.Add(name, *pkg)
+
+	// analyze every file
 	for _, f := range pass.Files {
 		fa := fileAnalyzer{pkgs: pkgs, pass: pass, file: f}
 		fa.analyze()
@@ -33,14 +44,13 @@ type fileAnalyzer struct {
 }
 
 func (fa *fileAnalyzer) analyze() {
-	ast.Inspect(fa.file, func(node ast.Node) bool {
+	// load contracts from every imported package
+	for _, node := range fa.file.Imports {
 		err := fa.pkgs.LoadImport(node)
 		if err != nil {
 			fa.pass.Reportf(node.Pos(), "cannot parse dependency package: %v", err)
-			return true
 		}
-		return true
-	})
+	}
 }
 
 // func (fa *fileAnalyzer) inspect(node ast.Node) bool {

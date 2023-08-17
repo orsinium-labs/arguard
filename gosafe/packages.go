@@ -18,12 +18,12 @@ func NewPackages() *Packages {
 }
 
 // LoadImport loads the package from the given import statement node.
-func (ps *Packages) LoadImport(node ast.Node) error {
-	importPath := getImportPath(node)
+func (ps *Packages) LoadImport(nImport *ast.ImportSpec) error {
+	importPath := getImportPath(nImport)
 	if importPath == "" {
 		return nil
 	}
-	return ps.LoadName(PackageName(importPath))
+	return ps.LoadName(importPath)
 }
 
 // LoadImport loads the package by its full name (import path).
@@ -32,7 +32,7 @@ func (ps *Packages) LoadName(pkgName PackageName) error {
 	if contains {
 		return nil
 	}
-	pkg, err := Extract(pkgName)
+	pkg, err := PackageFromName(pkgName)
 	if err != nil {
 		return fmt.Errorf("extract contracts from %s: %v", pkgName, err)
 	}
@@ -40,11 +40,11 @@ func (ps *Packages) LoadName(pkgName PackageName) error {
 	return nil
 }
 
-func getImportPath(node ast.Node) string {
-	nImport, ok := node.(*ast.ImportSpec)
-	if !ok {
-		return ""
-	}
+func (ps *Packages) Add(name PackageName, pkg Package) {
+	ps.pkgs[pkg.Name] = pkg
+}
+
+func getImportPath(nImport *ast.ImportSpec) PackageName {
 	if nImport.Path == nil {
 		return ""
 	}
@@ -54,5 +54,5 @@ func getImportPath(node ast.Node) string {
 	path := nImport.Path.Value
 	path, _ = strings.CutPrefix(path, "\"")
 	path, _ = strings.CutSuffix(path, "\"")
-	return path
+	return PackageName(path)
 }
