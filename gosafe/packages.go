@@ -44,6 +44,14 @@ func (ps *Packages) Add(name PackageName, pkg Package) {
 	ps.pkgs[pkg.Name] = pkg
 }
 
+func (ps *Packages) Get(name PackageName) *Package {
+	pkg, ok := ps.pkgs[name]
+	if !ok {
+		return nil
+	}
+	return &pkg
+}
+
 func getImportPath(nImport *ast.ImportSpec) PackageName {
 	if nImport.Path == nil {
 		return ""

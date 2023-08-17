@@ -51,29 +51,60 @@ func (fa *fileAnalyzer) analyze() {
 			fa.pass.Reportf(node.Pos(), "cannot parse dependency package: %v", err)
 		}
 	}
+
+	ast.Inspect(fa.file, func(node ast.Node) bool {
+		err := fa.inspect(node)
+		if err != nil {
+			fa.pass.Reportf(node.Pos(), err.Error())
+		}
+		return true
+	})
 }
 
-// func (fa *fileAnalyzer) inspect(node ast.Node) bool {
-// 	nCall, ok := node.(*ast.CallExpr)
-// 	if !ok {
-// 		return true
-// 	}
-// 	nIdent, ok := nCall.Fun.(*ast.Ident)
-// 	if !ok {
-// 		return true
-// 	}
-// 	obj, ok := fa.pass.TypesInfo.Uses[nIdent]
-// 	if !ok {
-// 		obj = fa.pass.TypesInfo.Defs[nIdent]
-// 	}
+func (fa *fileAnalyzer) inspect(node ast.Node) error {
+	// resolve the call target type
+	nCall, ok := node.(*ast.CallExpr)
+	if !ok {
+		return nil
+	}
+	nIdent, ok := nCall.Fun.(*ast.Ident)
+	if !ok {
+		return nil
+	}
+	obj, ok := fa.pass.TypesInfo.Uses[nIdent]
+	if !ok {
+		obj = fa.pass.TypesInfo.Defs[nIdent]
+	}
 
-// 	return true
-// }
+	// get the package
+	p := obj.Pkg()
+	if p == nil { // built-ins
+		return nil
+	}
+	pkgName := PackageName(p.Name())
+	pkg := fa.pkgs.Get(pkgName)
+	if pkg == nil {
+		return fmt.Errorf("package %s not loaded", pkgName)
+	}
 
-// func (i *Inspector) report() {
-// 	for name, count := range i.counts {
-// 		if count != 0 {
-// 			i.pass.Reportf(0, "%s: %d", name, count)
-// 		}
-// 	}
-// }
+	// get function contracts
+	// TODO: support function renaming
+	fName := nIdent.Name
+	// tFunc, ok :=
+	fn := pkg.Function("", fName)
+	if fn == nil {
+		return fmt.Errorf("function %s not found in %s", fName, pkgName)
+	}
+
+	// validate contracts
+	vars := fn.MapArgs(nCall.Args)
+	fa.pass.Reportf(node.Pos(), "function %s is called with %v", fName, vars)
+	// valid, err := fn.Validate(vars)
+	// if err != nil {
+	// 	return fmt.Errorf("validate contracts: %v", err)
+	// }
+	// if !valid {
+	// 	fa.pass.Reportf(node.Pos(), "contract violated")
+	// }
+	return nil
+}

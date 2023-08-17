@@ -23,7 +23,7 @@ func ContractFromAST(node ast.Node) *Contract {
 	return &Contract{nIf.Cond, "pre-condition failed"}
 }
 
-func (c Contract) Validate(vars map[string]any) (bool, error) {
+func (c Contract) Validate(vars map[string]string) (bool, error) {
 	i := interp.New(interp.Options{})
 	err := i.Use(stdlib.Symbols)
 	if err != nil {
@@ -31,7 +31,7 @@ func (c Contract) Validate(vars map[string]any) (bool, error) {
 	}
 	i.ImportUsed()
 	for name, val := range vars {
-		expr := fmt.Sprintf("%s = %#v", name, val)
+		expr := fmt.Sprintf("%s := %s", name, val)
 		_, err = i.Eval(expr)
 		if err != nil {
 			return false, fmt.Errorf("set value for %s: %v", name, err)
