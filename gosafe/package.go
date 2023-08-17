@@ -9,6 +9,7 @@ import (
 )
 
 type Package struct {
+	Name  string
 	funcs []Function
 }
 
@@ -34,7 +35,7 @@ func Extract(pkgName string) (*Package, error) {
 	for _, astFile := range pkg.Syntax {
 		funcs = append(funcs, extractFile(astFile)...)
 	}
-	return &Package{funcs: funcs}, nil
+	return &Package{Name: pkgName, funcs: funcs}, nil
 }
 
 func extractFile(astFile *ast.File) []Function {

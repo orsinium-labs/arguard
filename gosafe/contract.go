@@ -25,9 +25,11 @@ func ContractFromAST(node ast.Node) *Contract {
 
 func (c Contract) Validate(vars map[string]any) (bool, error) {
 	i := interp.New(interp.Options{})
-	i.Use(stdlib.Symbols)
+	err := i.Use(stdlib.Symbols)
+	if err != nil {
+		return false, fmt.Errorf("use stdlib: %v", err)
+	}
 	i.ImportUsed()
-	var err error
 	for name, val := range vars {
 		expr := fmt.Sprintf("%s = %#v", name, val)
 		_, err = i.Eval(expr)
