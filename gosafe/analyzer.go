@@ -3,8 +3,6 @@ package gosafe
 import (
 	"flag"
 	"go/ast"
-	"go/token"
-	"strings"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -20,9 +18,9 @@ func NewAnalyzer() *analysis.Analyzer {
 }
 
 func run(pass *analysis.Pass) (any, error) {
-	pkgs := Packages{pkgs: make(map[string]Package)}
+	pkgs := NewPackages()
 	for _, f := range pass.Files {
-		fa := fileAnalyzer{pkgs: &pkgs, pass: pass, file: f}
+		fa := fileAnalyzer{pkgs: pkgs, pass: pass, file: f}
 		fa.analyze()
 	}
 	return nil, nil
@@ -36,30 +34,13 @@ type fileAnalyzer struct {
 
 func (fa *fileAnalyzer) analyze() {
 	ast.Inspect(fa.file, func(node ast.Node) bool {
-		err := fa.pkgs.Load(node)
+		err := fa.pkgs.LoadImport(node)
 		if err != nil {
 			fa.pass.Reportf(node.Pos(), "cannot parse dependency package: %v", err)
 			return true
 		}
 		return true
 	})
-}
-
-func getImportPath(node ast.Node) string {
-	nImport, ok := node.(*ast.ImportSpec)
-	if !ok {
-		return ""
-	}
-	if nImport.Path == nil {
-		return ""
-	}
-	if nImport.Path.Kind != token.STRING {
-		return ""
-	}
-	path := nImport.Path.Value
-	path, _ = strings.CutPrefix(path, "\"")
-	path, _ = strings.CutSuffix(path, "\"")
-	return path
 }
 
 // func (fa *fileAnalyzer) inspect(node ast.Node) bool {

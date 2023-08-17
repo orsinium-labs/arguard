@@ -1,12 +1,13 @@
 package gosafe
 
-import "go/ast"
+import (
+	"go/ast"
+)
 
 type Function struct {
-	Recv      string
-	Name      string
-	LineNo    int
-	Contracts []Contract
+	Recv      string     `json:"recv"`
+	Name      string     `json:"name"`
+	Contracts []Contract `json:"contracts"`
 }
 
 func FunctionFromAST(node ast.Decl) *Function {

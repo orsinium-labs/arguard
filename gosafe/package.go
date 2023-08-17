@@ -8,19 +8,21 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+type PackageName string
+
 type Package struct {
-	Name  string
+	Name  PackageName
 	funcs []Function
 }
 
-func Extract(pkgName string) (*Package, error) {
+func Extract(pkgName PackageName) (*Package, error) {
 	loadMode := (packages.NeedName |
 		packages.NeedSyntax |
 		packages.NeedDeps |
 		packages.NeedTypes |
 		packages.NeedTypesInfo)
 	cfg := &packages.Config{Mode: loadMode}
-	pkgs, err := packages.Load(cfg, pkgName)
+	pkgs, err := packages.Load(cfg, string(pkgName))
 	if err != nil {
 		return nil, fmt.Errorf("load package: %v", err)
 	}
