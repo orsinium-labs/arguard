@@ -6,11 +6,11 @@ import (
 )
 
 type Function struct {
-	Recv      string     `json:"recv"`
-	Name      string     `json:"name"`
-	Args      []string   `json:"args"`
-	Contracts []Contract `json:"contracts"`
+	Args      []string
+	Contracts []Contract
 }
+
+func (*Function) AFact() {}
 
 func FunctionFromAST(node ast.Decl) *Function {
 	nFunc, ok := node.(*ast.FuncDecl)
@@ -37,8 +37,6 @@ func FunctionFromAST(node ast.Decl) *Function {
 		return nil
 	}
 	return &Function{
-		Recv:      funcRecvName(nFunc),
-		Name:      nFunc.Name.String(),
 		Contracts: contracts,
 		Args:      args,
 	}

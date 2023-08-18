@@ -5,9 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"go/ast"
+	"go/types"
 
 	"github.com/orsinium-labs/gosafe/contracts"
 	"golang.org/x/tools/go/analysis"
+	"golang.org/x/tools/go/types/typeutil"
 )
 
 func NewAnalyzer() *analysis.Analyzer {
@@ -25,27 +27,26 @@ func NewAnalyzer() *analysis.Analyzer {
 
 // run is the entry point for the analyzer
 func run(pass *analysis.Pass) (any, error) {
-	contractsResult, ok := pass.ResultOf[&contracts.Analyzer]
+	rawFuncs, ok := pass.ResultOf[&contracts.Analyzer]
 	if !ok {
 		return nil, errors.New("contracts analyzer is required but was not run")
 	}
-	pkgs := contractsResult.(*contracts.Packages)
+	funcs := rawFuncs.(contracts.Result)
 	// analyze every file
 	for _, f := range pass.Files {
-		fa := fileAnalyzer{pkgs: pkgs, pass: pass, file: f}
+		fa := fileAnalyzer{funcs: funcs, pass: pass, file: f}
 		fa.analyze()
 	}
 	return nil, nil
 }
 
 type fileAnalyzer struct {
-	pkgs *contracts.Packages
-	pass *analysis.Pass
-	file *ast.File
+	funcs contracts.Result
+	pass  *analysis.Pass
+	file  *ast.File
 }
 
 func (fa *fileAnalyzer) analyze() {
-
 	ast.Inspect(fa.file, func(node ast.Node) bool {
 		err := fa.inspect(node)
 		if err != nil {
@@ -61,30 +62,14 @@ func (fa *fileAnalyzer) inspect(node ast.Node) error {
 	if !ok {
 		return nil
 	}
-	nIdent, ok := nCall.Fun.(*ast.Ident)
-	if !ok {
+	obj, ok := typeutil.Callee(fa.pass.TypesInfo, nCall).(*types.Func)
+	if !ok { // anonymous function or something
 		return nil
-	}
-	obj, ok := fa.pass.TypesInfo.Uses[nIdent]
-	if !ok {
-		obj = fa.pass.TypesInfo.Defs[nIdent]
-	}
-
-	// get the package
-	p := obj.Pkg()
-	if p == nil { // built-ins
-		return nil
-	}
-	pkgName := contracts.PackageName(p.Name())
-	pkg := fa.pkgs.Get(pkgName)
-	if pkg == nil {
-		return fmt.Errorf("package %s not loaded", pkgName)
 	}
 
 	// get function contracts
-	fName := obj.Name()
-	fn := pkg.Function("", fName)
-	if fn == nil { // function doesn't have contracts
+	fn, ok := fa.funcs[obj]
+	if !ok { // function doesn't have contracts
 		return nil
 	}
 
