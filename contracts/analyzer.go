@@ -30,12 +30,18 @@ func run(pass *analysis.Pass) (any, error) {
 	exportFacts(facts, pass.TypesInfo, pass.Files)
 
 	// analyze all imported packages
+	pkgs := make(map[string]struct{})
 	for _, file := range pass.Files {
 		for _, nImport := range file.Imports {
 			importPath := getImportPath(nImport)
 			if importPath == "" {
 				continue
 			}
+			_, analyzed := pkgs[importPath]
+			if analyzed {
+				continue
+			}
+			pkgs[importPath] = struct{}{}
 			pkg, err := loadPackageInfo(importPath)
 			if err != nil {
 				pass.Reportf(nImport.Pos(), "load package info: %v", err)
@@ -93,7 +99,6 @@ func exportFact(facts Result, info *types.Info, decl ast.Decl) {
 		return
 	}
 	facts[obj] = fact
-	// fmt.Printf("exported fact for %s\n", obj.FullName())
 }
 
 func getImportPath(nImport *ast.ImportSpec) string {
