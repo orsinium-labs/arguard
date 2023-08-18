@@ -75,12 +75,13 @@ func (fa *fileAnalyzer) inspect(node ast.Node) error {
 
 	// validate contracts
 	vars := fn.MapArgs(nCall.Args)
-	valid, err := fn.Validate(vars)
+	contract, err := fn.Validate(vars)
 	if err != nil {
 		return fmt.Errorf("validate contracts: %v", err)
 	}
-	if !valid {
-		fa.pass.Reportf(node.Pos(), "contract violated")
+	if contract != nil {
+		fa.pass.Reportf(node.Pos(), "contract violated (%s): %s",
+			contract.Condition, contract.Message)
 	}
 	return nil
 }

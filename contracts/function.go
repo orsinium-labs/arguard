@@ -58,17 +58,17 @@ func (fn Function) MapArgs(exprs []ast.Expr) map[string]string {
 	return res
 }
 
-func (fn Function) Validate(vars map[string]string) (bool, error) {
-	for i, c := range fn.Contracts {
+func (fn Function) Validate(vars map[string]string) (*Contract, error) {
+	for _, c := range fn.Contracts {
 		valid, err := c.Validate(vars)
 		if err != nil {
-			return false, fmt.Errorf("contract #%d: %v", i+1, err)
+			return &c, fmt.Errorf("run `%s`: %v", c.Condition, err)
 		}
 		if !valid {
-			return false, nil
+			return &c, nil
 		}
 	}
-	return true, nil
+	return nil, nil
 }
 
 func getFuncArgs(nFunc *ast.FuncDecl) []string {
