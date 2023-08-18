@@ -10,7 +10,7 @@ import (
 )
 
 type Contract struct {
-	Condition ast.Expr
+	Condition string
 	Message   string
 }
 
@@ -20,7 +20,11 @@ func ContractFromAST(node ast.Node) *Contract {
 		return nil
 	}
 	// nIf.Body
-	return &Contract{nIf.Cond, "pre-condition failed"}
+	cond, err := stringify(nIf.Cond)
+	if err != nil {
+		return nil
+	}
+	return &Contract{cond, "pre-condition failed"}
 }
 
 func (c Contract) Validate(vars map[string]string) (bool, error) {
@@ -37,17 +41,34 @@ func (c Contract) Validate(vars map[string]string) (bool, error) {
 			return false, fmt.Errorf("set value for %s: %v", name, err)
 		}
 	}
-	prog, err := i.CompileAST(c.Condition)
+	res, err := i.Eval(c.Condition)
 	if err != nil {
-		return false, fmt.Errorf("compile condition: %v", err)
-	}
-	res, err := i.Execute(prog)
-	if err != nil {
-		return false, fmt.Errorf("execute condition: %v", err)
+		return false, fmt.Errorf("evaluate condition: %v", err)
 	}
 	condOk, isBool := res.Interface().(bool)
 	if !isBool {
 		return false, errors.New("condition result is not bool")
 	}
-	return condOk, nil
+	return !condOk, nil
+}
+
+func stringify(expr ast.Expr) (string, error) {
+	switch v := expr.(type) {
+	case *ast.BinaryExpr:
+		left, err := stringify(v.X)
+		if err != nil {
+			return "", err
+		}
+		right, err := stringify(v.Y)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("%s %s %s", left, v.Op.String(), right), nil
+	case *ast.BasicLit:
+		return v.Value, nil
+	case *ast.Ident:
+		return v.Name, nil
+	default:
+		return "", fmt.Errorf("unsupported node: %v", expr)
+	}
 }

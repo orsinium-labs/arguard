@@ -88,23 +88,20 @@ func (fa *fileAnalyzer) inspect(node ast.Node) error {
 	}
 
 	// get function contracts
-	// TODO: support function renaming
-	fName := nIdent.Name
-	// tFunc, ok :=
+	fName := obj.Name()
 	fn := pkg.Function("", fName)
-	if fn == nil {
-		return fmt.Errorf("function %s not found in %s", fName, pkgName)
+	if fn == nil { // function doesn't have contracts
+		return nil
 	}
 
 	// validate contracts
 	vars := fn.MapArgs(nCall.Args)
-	fa.pass.Reportf(node.Pos(), "function %s is called with %v", fName, vars)
-	// valid, err := fn.Validate(vars)
-	// if err != nil {
-	// 	return fmt.Errorf("validate contracts: %v", err)
-	// }
-	// if !valid {
-	// 	fa.pass.Reportf(node.Pos(), "contract violated")
-	// }
+	valid, err := fn.Validate(vars)
+	if err != nil {
+		return fmt.Errorf("validate contracts: %v", err)
+	}
+	if !valid {
+		fa.pass.Reportf(node.Pos(), "contract violated")
+	}
 	return nil
 }
