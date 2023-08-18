@@ -1,4 +1,4 @@
-package gosafe
+package contracts
 
 import (
 	"errors"
