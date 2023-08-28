@@ -14,7 +14,7 @@ type Contract struct {
 	Message   string
 }
 
-func ContractFromAST(node ast.Node) *Contract {
+func contractFromAST(node ast.Node) *Contract {
 	nIf, ok := node.(*ast.IfStmt)
 	if !ok {
 		return nil
@@ -27,7 +27,8 @@ func ContractFromAST(node ast.Node) *Contract {
 	return &Contract{cond, "pre-condition failed"}
 }
 
-func (c Contract) Validate(vars map[string]string) (bool, error) {
+// vlaidate returns false if the contract is violated.
+func (c Contract) validate(vars map[string]string) (bool, error) {
 	i := interp.New(interp.Options{})
 	err := i.Use(stdlib.Symbols)
 	if err != nil {
@@ -52,6 +53,9 @@ func (c Contract) Validate(vars map[string]string) (bool, error) {
 	return !condOk, nil
 }
 
+// Convert the given AST expression into a valid Go syntax string.
+//
+// Returns an error for unsupported or not safe to execute expressions.
 func stringify(expr ast.Expr) (string, error) {
 	switch v := expr.(type) {
 	case *ast.BinaryExpr:

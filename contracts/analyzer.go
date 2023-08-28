@@ -94,7 +94,7 @@ func exportFact(facts Result, info *types.Info, decl ast.Decl) {
 		return
 	}
 
-	fact := FunctionFromAST(decl)
+	fact := functionFromAST(decl)
 	if fact == nil {
 		return
 	}

@@ -12,7 +12,7 @@ type Function struct {
 
 func (*Function) AFact() {}
 
-func FunctionFromAST(node ast.Decl) *Function {
+func functionFromAST(node ast.Decl) *Function {
 	nFunc, ok := node.(*ast.FuncDecl)
 	if !ok {
 		return nil
@@ -23,7 +23,7 @@ func FunctionFromAST(node ast.Decl) *Function {
 
 	contracts := make([]Contract, 0)
 	for _, stmt := range nFunc.Body.List {
-		contract := ContractFromAST(stmt)
+		contract := contractFromAST(stmt)
 		if contract == nil {
 			break
 		}
@@ -58,19 +58,32 @@ func (fn Function) MapArgs(exprs []ast.Expr) map[string]string {
 	return res
 }
 
+// Validate chackes all contracts for a function using the given function arguments.
+//
+// If a contract is violated, that contract is returned.
+//
+// Possible return values:
+//
+//   - (nil, SomeError): one or more contracts failed, the first failure is returned.
+//   - (contract, nil): a contract is violated, that contract is returned.
 func (fn Function) Validate(vars map[string]string) (*Contract, error) {
+	var firstErr error = nil
 	for _, c := range fn.Contracts {
-		valid, err := c.Validate(vars)
+		valid, err := c.validate(vars)
 		if err != nil {
-			return &c, fmt.Errorf("run `%s`: %v", c.Condition, err)
+			if firstErr == nil {
+				firstErr = fmt.Errorf("run `%s`: %v", c.Condition, err)
+			}
+			continue
 		}
 		if !valid {
 			return &c, nil
 		}
 	}
-	return nil, nil
+	return nil, firstErr
 }
 
+// getFuncArgs returns argument names for the given function declaration.
 func getFuncArgs(nFunc *ast.FuncDecl) []string {
 	if nFunc.Type == nil {
 		return nil
