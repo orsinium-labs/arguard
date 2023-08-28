@@ -3,6 +3,9 @@ package contracts
 import (
 	"fmt"
 	"go/ast"
+
+	"github.com/traefik/yaegi/interp"
+	"github.com/traefik/yaegi/stdlib"
 )
 
 type Function struct {
@@ -59,12 +62,34 @@ func (fn Function) MapArgs(exprs []ast.Expr) map[string]string {
 //
 // Possible return values:
 //
-//   - (nil, SomeError): one or more contracts failed, the first failure is returned.
 //   - (contract, nil): a contract is violated, that contract is returned.
+//   - (nil, SomeError): one or more contracts failed, the first failure is returned.
+//
+// If a contract failed and another one succeeded but violated,
+// the error is nil and the violated contract is returned.
+// In other words, don't worry that we cannot execute a contract
+// if we have a meaningful error to show for another contract.
+// That allows the analyzer to safely ignore contract errors.
 func (fn Function) Validate(vars map[string]string) (*Contract, error) {
+	// prepare interpreter
+	interpreter := interp.New(interp.Options{})
+	err := interpreter.Use(stdlib.Symbols)
+	if err != nil {
+		return nil, fmt.Errorf("use stdlib: %v", err)
+	}
+	interpreter.ImportUsed()
+	for name, val := range vars {
+		expr := fmt.Sprintf("%s := %s", name, val)
+		_, err = interpreter.Eval(expr)
+		if err != nil {
+			return nil, fmt.Errorf("set value for %s: %v", name, err)
+		}
+	}
+
+	// check all contracts
 	var firstErr error = nil
 	for _, c := range fn.Contracts {
-		valid, err := c.validate(vars)
+		valid, err := c.validate(interpreter)
 		if err != nil {
 			if firstErr == nil {
 				firstErr = fmt.Errorf("run `%s`: %v", c.Condition, err)

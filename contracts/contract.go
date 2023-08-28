@@ -1,20 +1,18 @@
 package contracts
 
 import (
-	"errors"
 	"fmt"
 	"go/ast"
 	"go/token"
 	"strings"
 
 	"github.com/traefik/yaegi/interp"
-	"github.com/traefik/yaegi/stdlib"
 )
 
 type Contract struct {
-	node      ast.Node
-	Condition string
-	Message   string
+	Pos       token.Pos // contract position, used for positioning debug messages
+	Condition string    // valid Go-syntax expression which if true, the contract is violated
+	Message   string    // error message to show on contract failure
 }
 
 func contractFromAST(node ast.Node) *Contract {
@@ -22,7 +20,6 @@ func contractFromAST(node ast.Node) *Contract {
 	if !ok {
 		return nil
 	}
-	// nIf.Body
 	cond, err := extractCondition(nIf.Cond)
 	if err != nil {
 		return nil
@@ -31,31 +28,18 @@ func contractFromAST(node ast.Node) *Contract {
 	if msg == "" {
 		msg = "pre-condition failed"
 	}
-	return &Contract{node, cond, msg}
+	return &Contract{node.Pos(), cond, msg}
 }
 
 // vlaidate returns false if the contract is violated.
-func (c Contract) validate(vars map[string]string) (bool, error) {
-	i := interp.New(interp.Options{})
-	err := i.Use(stdlib.Symbols)
-	if err != nil {
-		return false, fmt.Errorf("use stdlib: %v", err)
-	}
-	i.ImportUsed()
-	for name, val := range vars {
-		expr := fmt.Sprintf("%s := %s", name, val)
-		_, err = i.Eval(expr)
-		if err != nil {
-			return false, fmt.Errorf("set value for %s: %v", name, err)
-		}
-	}
-	res, err := i.Eval(c.Condition)
+func (c Contract) validate(interpreter *interp.Interpreter) (bool, error) {
+	res, err := interpreter.Eval(c.Condition)
 	if err != nil {
 		return false, fmt.Errorf("evaluate condition: %v", err)
 	}
 	condOk, isBool := res.Interface().(bool)
 	if !isBool {
-		return false, errors.New("condition result is not bool")
+		return false, fmt.Errorf("condition result: expected bool, actual %s", res.Kind())
 	}
 	return !condOk, nil
 }

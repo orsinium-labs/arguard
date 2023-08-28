@@ -46,7 +46,7 @@ func (a analyzer) run(pass *analysis.Pass) (any, error) {
 	if a.config.ReportContracts {
 		for _, fInfo := range facts {
 			for _, c := range fInfo.Contracts {
-				pass.Reportf(c.node.Pos(), "contract: %s", c.Message)
+				pass.Reportf(c.Pos, "contract: %s", c.Message)
 			}
 		}
 	}
