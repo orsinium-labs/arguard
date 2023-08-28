@@ -26,7 +26,7 @@ func contractFromAST(node ast.Node) *Contract {
 	}
 	msg := extractMessage(nIf.Body)
 	if msg == "" {
-		msg = "pre-condition failed"
+		msg = "should be false: " + cond
 	}
 	return &Contract{node.Pos(), cond, msg}
 }

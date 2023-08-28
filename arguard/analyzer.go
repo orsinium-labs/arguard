@@ -90,7 +90,6 @@ func (fa *fileAnalyzer) inspect(node ast.Node) {
 		return
 	}
 	if contract != nil {
-		fa.pass.Reportf(node.Pos(), "contract violated (%s): %s",
-			contract.Condition, contract.Message)
+		fa.pass.Reportf(node.Pos(), "contract violated: %s", contract.Message)
 	}
 }

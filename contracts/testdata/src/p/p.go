@@ -3,7 +3,7 @@ package p
 import "errors"
 
 func F1(in int) error {
-	if in == 0 { // want "contract: pre-condition failed"
+	if in == 0 { // want "contract: should be false: in == 0"
 		return errors.New("must not be zero")
 	}
 	if in == 1 { // want "contract: must not be one"
