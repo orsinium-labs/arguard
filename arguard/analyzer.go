@@ -2,7 +2,6 @@ package arguard
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"go/ast"
 	"go/types"
@@ -12,22 +11,24 @@ import (
 	"golang.org/x/tools/go/types/typeutil"
 )
 
-func NewAnalyzer() *analysis.Analyzer {
-	var flagSet flag.FlagSet
+func NewAnalyzer(contractsAnalyzer *analysis.Analyzer) *analysis.Analyzer {
+	a := analyzer{contractsAnalyzer}
 	return &analysis.Analyzer{
-		Name:  "gosafe",
-		Doc:   "finds code that will fail",
-		Run:   run,
-		Flags: flagSet,
-		Requires: []*analysis.Analyzer{
-			&contracts.Analyzer,
-		},
+		Name:     "gosafe",
+		Doc:      "finds code that will fail",
+		Run:      a.run,
+		Requires: []*analysis.Analyzer{contractsAnalyzer},
+		// Flags:    flagSet,
 	}
 }
 
+type analyzer struct {
+	contracts *analysis.Analyzer
+}
+
 // run is the entry point for the analyzer
-func run(pass *analysis.Pass) (any, error) {
-	rawFuncs, ok := pass.ResultOf[&contracts.Analyzer]
+func (a analyzer) run(pass *analysis.Pass) (any, error) {
+	rawFuncs, ok := pass.ResultOf[a.contracts]
 	if !ok {
 		return nil, errors.New("contracts analyzer is required but was not run")
 	}

@@ -15,33 +15,46 @@ import (
 
 type Result map[*types.Func]*Function
 
-var Analyzer = analysis.Analyzer{
-	Name:       "contracts",
-	Doc:        "extract conditions that function arguments must satisfy",
-	Run:        run,
-	ResultType: reflect.TypeOf((Result)(nil)),
-	// Flags:      flagSet,
+func NewAnalyzer(config Config) analysis.Analyzer {
+	analyzer := analyzer{config}
+	return analysis.Analyzer{
+		Name:       "contracts",
+		Doc:        "extract conditions that function arguments must satisfy",
+		Run:        analyzer.run,
+		ResultType: reflect.TypeOf((Result)(nil)),
+		Flags:      *config.flagSet(),
+	}
 }
 
-// run is the entry point for the analyzer
-func run(pass *analysis.Pass) (any, error) {
+type analyzer struct {
+	config Config
+}
+
+// run is the entry point for the analyzer.
+func (a analyzer) run(pass *analysis.Pass) (any, error) {
 	facts := make(Result)
 	// analyze the current package
 	exportFacts(facts, pass.TypesInfo, pass.Files)
-
 	// analyze all imported packages
-	pkgs := make(map[string]struct{})
+	if a.config.FollowImports {
+		analyzeImports(facts, pass)
+	}
+	return facts, nil
+}
+
+func analyzeImports(facts Result, pass *analysis.Pass) {
+	analyzedPackages := make(map[string]struct{})
 	for _, file := range pass.Files {
 		for _, nImport := range file.Imports {
 			importPath := getImportPath(nImport)
-			if importPath == "" {
+			if importPath == "" { // shouldn't happen for any valid AST
 				continue
 			}
-			_, analyzed := pkgs[importPath]
-			if analyzed {
+			_, analyzed := analyzedPackages[importPath]
+			if analyzed { // already analyzed, skip
 				continue
 			}
-			pkgs[importPath] = struct{}{}
+			analyzedPackages[importPath] = struct{}{}
 			pkg, err := loadPackageInfo(importPath)
 			if err != nil {
 				pass.Reportf(nImport.Pos(), "load package info: %v", err)
@@ -49,7 +62,6 @@ func run(pass *analysis.Pass) (any, error) {
 			exportFacts(facts, pkg.TypesInfo, pkg.Syntax)
 		}
 	}
-	return facts, nil
 }
 
 func loadPackageInfo(pkgName string) (*packages.Package, error) {
@@ -69,6 +81,7 @@ func loadPackageInfo(pkgName string) (*packages.Package, error) {
 	if len(pkgs) > 1 {
 		return nil, fmt.Errorf("loaded %d packages, expected 1", len(pkgs))
 	}
+	// pkgs[0].Imports
 	return pkgs[0], nil
 }
 
