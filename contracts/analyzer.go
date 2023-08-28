@@ -33,12 +33,24 @@ type analyzer struct {
 // run is the entry point for the analyzer.
 func (a analyzer) run(pass *analysis.Pass) (any, error) {
 	facts := make(Result)
+
 	// analyze the current package
 	exportFacts(facts, pass.TypesInfo, pass.Files)
+
 	// analyze all imported packages
 	if a.config.FollowImports {
 		analyzeImports(facts, pass)
 	}
+
+	// if in debug mode, report all detected contracts
+	if a.config.ReportContracts {
+		for _, fInfo := range facts {
+			for _, c := range fInfo.Contracts {
+				pass.Reportf(c.node.Pos(), "contract: %s", c.Message)
+			}
+		}
+	}
+
 	return facts, nil
 }
 

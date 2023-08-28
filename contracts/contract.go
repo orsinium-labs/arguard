@@ -10,6 +10,7 @@ import (
 )
 
 type Contract struct {
+	node      ast.Node
 	Condition string
 	Message   string
 }
@@ -24,7 +25,7 @@ func contractFromAST(node ast.Node) *Contract {
 	if err != nil {
 		return nil
 	}
-	return &Contract{cond, "pre-condition failed"}
+	return &Contract{node, cond, "pre-condition failed"}
 }
 
 // vlaidate returns false if the contract is violated.
