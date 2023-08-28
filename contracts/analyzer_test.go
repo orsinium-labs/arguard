@@ -22,3 +22,15 @@ func TestAll(t *testing.T) {
 	analyzer := contracts.NewAnalyzer(config)
 	analysistest.Run(t, testdata, &analyzer, "p")
 }
+
+func TestImports(t *testing.T) {
+	t.Parallel()
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+	testdata := filepath.Join(wd, "testdata")
+	config := contracts.NewConfig()
+	analyzer := contracts.NewAnalyzer(config)
+	analysistest.Run(t, testdata, &analyzer, "i")
+}
