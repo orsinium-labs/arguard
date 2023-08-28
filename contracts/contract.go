@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"go/ast"
+	"go/token"
+	"strings"
 
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
@@ -21,11 +23,15 @@ func contractFromAST(node ast.Node) *Contract {
 		return nil
 	}
 	// nIf.Body
-	cond, err := stringify(nIf.Cond)
+	cond, err := extractCondition(nIf.Cond)
 	if err != nil {
 		return nil
 	}
-	return &Contract{node, cond, "pre-condition failed"}
+	msg := extractMessage(nIf.Body)
+	if msg == "" {
+		msg = "pre-condition failed"
+	}
+	return &Contract{node, cond, msg}
 }
 
 // vlaidate returns false if the contract is violated.
@@ -54,17 +60,17 @@ func (c Contract) validate(vars map[string]string) (bool, error) {
 	return !condOk, nil
 }
 
-// Convert the given AST expression into a valid Go syntax string.
+// extractCondition converts the given AST expression into a valid Go syntax string.
 //
 // Returns an error for unsupported or not safe to execute expressions.
-func stringify(expr ast.Expr) (string, error) {
+func extractCondition(expr ast.Expr) (string, error) {
 	switch v := expr.(type) {
 	case *ast.BinaryExpr:
-		left, err := stringify(v.X)
+		left, err := extractCondition(v.X)
 		if err != nil {
 			return "", err
 		}
-		right, err := stringify(v.Y)
+		right, err := extractCondition(v.Y)
 		if err != nil {
 			return "", err
 		}
@@ -76,4 +82,61 @@ func stringify(expr ast.Expr) (string, error) {
 	default:
 		return "", fmt.Errorf("unsupported node: %v", expr)
 	}
+}
+
+func extractMessage(nBody *ast.BlockStmt) string {
+	if nBody.List == nil {
+		return ""
+	}
+	if len(nBody.List) != 1 {
+		return ""
+	}
+	nStmt := nBody.List[0]
+
+	// check if it's panic
+	nExpr, ok := nStmt.(*ast.ExprStmt)
+	if ok {
+		return extractMessageFromPanic(nExpr)
+	}
+
+	return ""
+}
+
+func extractMessageFromPanic(nExpr *ast.ExprStmt) string {
+	// check if the expression is a "panic"
+	if nExpr.X == nil {
+		return ""
+	}
+	nCall, ok := nExpr.X.(*ast.CallExpr)
+	if !ok {
+		return ""
+	}
+	if nCall.Fun == nil {
+		return ""
+	}
+	nIdent, ok := nCall.Fun.(*ast.Ident)
+	if !ok {
+		return ""
+	}
+	if nIdent.Name != "panic" {
+		return ""
+	}
+	if nCall.Args == nil {
+		return ""
+	}
+	if len(nCall.Args) != 1 {
+		return ""
+	}
+
+	// extract the error message
+	nArg := nCall.Args[0]
+	nLit, ok := nArg.(*ast.BasicLit)
+	if ok {
+		if nLit.Kind == token.STRING {
+			return strings.Trim(nLit.Value, `"`)
+		}
+		return nLit.Value
+	}
+
+	return ""
 }
