@@ -2,7 +2,6 @@ package arguard
 
 import (
 	"errors"
-	"fmt"
 	"go/ast"
 	"go/types"
 
@@ -11,18 +10,22 @@ import (
 	"golang.org/x/tools/go/types/typeutil"
 )
 
-func NewAnalyzer(contractsAnalyzer *analysis.Analyzer) *analysis.Analyzer {
-	a := analyzer{contractsAnalyzer}
+func NewAnalyzer(
+	config Config,
+	contractsAnalyzer *analysis.Analyzer,
+) *analysis.Analyzer {
+	a := analyzer{config, contractsAnalyzer}
 	return &analysis.Analyzer{
 		Name:     "gosafe",
 		Doc:      "finds code that will fail",
 		Run:      a.run,
 		Requires: []*analysis.Analyzer{contractsAnalyzer},
-		// Flags:    flagSet,
+		Flags:    *config.flagSet(),
 	}
 }
 
 type analyzer struct {
+	config    Config
 	contracts *analysis.Analyzer
 }
 
@@ -34,55 +37,60 @@ func (a analyzer) run(pass *analysis.Pass) (any, error) {
 	}
 	funcs := rawFuncs.(contracts.Result)
 	// analyze every file
-	for _, f := range pass.Files {
-		fa := fileAnalyzer{funcs: funcs, pass: pass, file: f}
+	for _, file := range pass.Files {
+		fa := fileAnalyzer{
+			config: a.config,
+			funcs:  funcs,
+			pass:   pass,
+			file:   file,
+		}
 		fa.analyze()
 	}
 	return nil, nil
 }
 
 type fileAnalyzer struct {
-	funcs contracts.Result
-	pass  *analysis.Pass
-	file  *ast.File
+	config Config
+	funcs  contracts.Result
+	pass   *analysis.Pass
+	file   *ast.File
 }
 
 func (fa *fileAnalyzer) analyze() {
 	ast.Inspect(fa.file, func(node ast.Node) bool {
-		err := fa.inspect(node)
-		if err != nil {
-			fa.pass.Reportf(node.Pos(), err.Error())
-		}
+		fa.inspect(node)
 		return true
 	})
 }
 
-func (fa *fileAnalyzer) inspect(node ast.Node) error {
+func (fa *fileAnalyzer) inspect(node ast.Node) {
 	// resolve the call target type
 	nCall, ok := node.(*ast.CallExpr)
 	if !ok {
-		return nil
+		return
 	}
 	obj, ok := typeutil.Callee(fa.pass.TypesInfo, nCall).(*types.Func)
 	if !ok { // anonymous function or something
-		return nil
+		return
 	}
 
 	// get function contracts
 	fn, ok := fa.funcs[obj]
 	if !ok { // function doesn't have contracts
-		return nil
+		return
 	}
 
 	// validate contracts
 	vars := fn.MapArgs(nCall.Args)
 	contract, err := fn.Validate(vars)
 	if err != nil {
-		return fmt.Errorf("validate contracts: %v", err)
+		if fa.config.ReportErrors {
+			fa.pass.Reportf(node.Pos(), "error executing contracts: %v", err)
+		}
+		return
 	}
 	if contract != nil {
 		fa.pass.Reportf(node.Pos(), "contract violated (%s): %s",
 			contract.Condition, contract.Message)
 	}
-	return nil
 }

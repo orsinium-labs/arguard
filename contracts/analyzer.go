@@ -81,7 +81,6 @@ func loadPackageInfo(pkgName string) (*packages.Package, error) {
 	if len(pkgs) > 1 {
 		return nil, fmt.Errorf("loaded %d packages, expected 1", len(pkgs))
 	}
-	// pkgs[0].Imports
 	return pkgs[0], nil
 }
 
@@ -95,7 +94,7 @@ func exportFacts(facts Result, info *types.Info, files []*ast.File) {
 
 func exportFact(facts Result, info *types.Info, decl ast.Decl) {
 	fdecl, ok := decl.(*ast.FuncDecl)
-	if !ok || fdecl.Body == nil {
+	if !ok || fdecl.Body == nil { // not a func declaration or func without a body
 		return
 	}
 	obj, ok := info.Defs[fdecl.Name].(*types.Func)
@@ -103,11 +102,11 @@ func exportFact(facts Result, info *types.Info, decl ast.Decl) {
 		return
 	}
 	_, exists := facts[obj]
-	if exists {
+	if exists { // already analyzed
 		return
 	}
 
-	fact := functionFromAST(decl)
+	fact := functionFromAST(fdecl)
 	if fact == nil {
 		return
 	}

@@ -12,15 +12,10 @@ type Function struct {
 
 func (*Function) AFact() {}
 
-func functionFromAST(node ast.Decl) *Function {
-	nFunc, ok := node.(*ast.FuncDecl)
-	if !ok {
-		return nil
-	}
+func functionFromAST(nFunc *ast.FuncDecl) *Function {
 	if nFunc.Body == nil {
 		return nil
 	}
-
 	contracts := make([]Contract, 0)
 	for _, stmt := range nFunc.Body.List {
 		contract := contractFromAST(stmt)

@@ -7,8 +7,9 @@ import (
 )
 
 func main() {
-	contractsConfig := contracts.NewConfig()
-	contractsAnalyzer := contracts.NewAnalyzer(contractsConfig)
-	arguardAnalyzer := arguard.NewAnalyzer(&contractsAnalyzer)
-	singlechecker.Main(arguardAnalyzer)
+	cConfig := contracts.NewConfig()
+	cAnalyzer := contracts.NewAnalyzer(cConfig)
+	aConfig := arguard.NewConfig()
+	aAnalyzer := arguard.NewAnalyzer(aConfig, &cAnalyzer)
+	singlechecker.Main(aAnalyzer)
 }
