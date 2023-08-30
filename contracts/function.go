@@ -17,30 +17,34 @@ type Function struct {
 func (*Function) AFact() {}
 
 func functionFromAST(nFunc *ast.FuncDecl, info *types.Info) *Function {
-	if nFunc.Body == nil {
+	if nFunc.Body == nil { // should be unreachable, the caller also checks that
 		return nil
 	}
+
+	args := getFuncArgs(nFunc)
+	if len(args) == 0 { // functions without arguments can't have pre-conditions
+		return nil
+	}
+
 	contracts := make([]Contract, 0)
 	for _, stmt := range nFunc.Body.List {
-		contract := contractFromAST(stmt, info)
-		if contract == nil {
+		contract, err := contractFromAST(stmt, info)
+		if err != nil {
+			// We assume that contracts go before any other code in the function.
+			// If we don't do that, the function might modify the argument value
+			// or break early before the contract. So, the contract that we check
+			// might be actually unreachable or different in the runtime.
 			break
 		}
 		contracts = append(contracts, *contract)
 	}
-	if len(contracts) == 0 {
+	if len(contracts) == 0 { // we're not interested in functions without contracts
 		return nil
 	}
-	args := getFuncArgs(nFunc)
-	if len(args) == 0 {
-		return nil
-	}
-	return &Function{
-		Contracts: contracts,
-		Args:      args,
-	}
+	return &Function{args, contracts}
 }
 
+// MapArgs converts list of expressions to strings and maps them to function argument names.
 func (fn Function) MapArgs(exprs []ast.Expr) map[string]string {
 	if len(fn.Args) != len(exprs) {
 		return nil

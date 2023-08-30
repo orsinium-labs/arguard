@@ -1,6 +1,7 @@
 package contracts
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -18,27 +19,34 @@ type Contract struct {
 	Message   string    // error message to show on contract failure
 }
 
-func contractFromAST(node ast.Node, info *types.Info) *Contract {
+// contractFromAST returns a contract if the given AST node looks like one.
+//
+// The returned error explains why the node cannot be converted into a contract.
+// It might be not an if statement, not use input args, be unsafe to statically execute
+// and lots of other reasons. Most of the real code isn't a contract.
+func contractFromAST(node ast.Node, info *types.Info) (*Contract, error) {
 	nIf, ok := node.(*ast.IfStmt)
 	if !ok {
-		return nil
+		return nil, errors.New("not an if statement")
 	}
 	cond, names, err := extractCondition(nIf.Cond, info)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("extract condition: %v", err)
+	}
+	if len(names) == 0 {
+		return nil, errors.New("condition is static (uses no variables)")
 	}
 	msg, isError := extractMessage(nIf.Body, info)
 	if !isError {
-		return nil
+		return nil, errors.New("body doesn't look like a contract")
 	}
 	if msg == "" {
 		msg = "should be false: " + cond
 	}
-	return &Contract{node.Pos(), cond, names, msg}
+	return &Contract{node.Pos(), cond, names, msg}, nil
 }
 
-// allDefined checks if vars define all unbound variables
-// needed to execute the contract.
+// allDefined checks if vars define all unbound variables needed to execute the contract.
 func (c Contract) allDefined(vars map[string]string) bool {
 	for _, name := range c.Names {
 		_, defined := vars[name]
