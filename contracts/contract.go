@@ -29,7 +29,7 @@ func contractFromAST(node ast.Node, info *types.Info) (*Contract, error) {
 	if !ok {
 		return nil, errors.New("not an if statement")
 	}
-	cond, names, err := extractCondition(nIf.Cond, info)
+	cond, names, err := expr2string(nIf.Cond, info)
 	if err != nil {
 		return nil, fmt.Errorf("extract condition: %v", err)
 	}
@@ -70,17 +70,17 @@ func (c Contract) validate(interpreter *interp.Interpreter) (bool, error) {
 	return !condOk, nil
 }
 
-// extractCondition converts the given AST expression into a valid Go syntax string.
+// expr2string converts the given AST expression into a valid Go syntax string.
 //
 // Returns an error for unsupported or not safe to execute expressions.
-func extractCondition(expr ast.Expr, info *types.Info) (string, []string, error) {
+func expr2string(expr ast.Expr, info *types.Info) (string, []string, error) {
 	switch v := expr.(type) {
 	case *ast.BinaryExpr:
-		lExpr, lNames, err := extractCondition(v.X, info)
+		lExpr, lNames, err := expr2string(v.X, info)
 		if err != nil {
 			return "", nil, err
 		}
-		rExpr, rNames, err := extractCondition(v.Y, info)
+		rExpr, rNames, err := expr2string(v.Y, info)
 		if err != nil {
 			return "", nil, err
 		}

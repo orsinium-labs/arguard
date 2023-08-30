@@ -45,18 +45,21 @@ func functionFromAST(nFunc *ast.FuncDecl, info *types.Info) *Function {
 }
 
 // MapArgs converts list of expressions to strings and maps them to function argument names.
-func (fn Function) MapArgs(exprs []ast.Expr) map[string]string {
+func (fn Function) MapArgs(exprs []ast.Expr, info *types.Info) map[string]string {
 	if len(fn.Args) != len(exprs) {
 		return nil
 	}
 	res := make(map[string]string)
 	for i, arg := range fn.Args {
 		expr := exprs[i]
-		nLit, ok := expr.(*ast.BasicLit)
-		if !ok {
+		strExpr, names, err := expr2string(expr, info)
+		if len(names) != 0 { // argument definition must not have any unbound variables
 			continue
 		}
-		res[arg] = nLit.Value
+		if err != nil {
+			continue
+		}
+		res[arg] = strExpr
 	}
 	return res
 }

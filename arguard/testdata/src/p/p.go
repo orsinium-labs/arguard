@@ -36,4 +36,9 @@ func F4(in int) {
 	F3(in, 2) // want "contract violated: y is two"
 	F3(1, 2)  // want "contract violated: x is one"
 	F3(5, in) // want "contract violated: x is five"
+
+	F3(FIVE, in)     // want "contract violated: x is five"
+	F3(FIVE-1+1, in) // want "contract violated: x is five"
+	F3(3+2, in)      // want "contract violated: x is five"
+	F3(FIVE-1, in)
 }

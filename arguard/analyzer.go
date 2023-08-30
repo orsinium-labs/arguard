@@ -81,7 +81,7 @@ func (fa *fileAnalyzer) inspect(node ast.Node) {
 	}
 
 	// validate contracts
-	vars := fn.MapArgs(nCall.Args)
+	vars := fn.MapArgs(nCall.Args, fa.pass.TypesInfo)
 	contract, err := fn.Validate(vars)
 	if err != nil {
 		if fa.config.ReportErrors {
