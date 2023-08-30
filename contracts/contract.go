@@ -27,7 +27,10 @@ func contractFromAST(node ast.Node, info *types.Info) *Contract {
 	if err != nil {
 		return nil
 	}
-	msg := extractMessage(nIf.Body)
+	msg, isError := extractMessage(nIf.Body, info)
+	if !isError {
+		return nil
+	}
 	if msg == "" {
 		msg = "should be false: " + cond
 	}
@@ -46,7 +49,7 @@ func (c Contract) allDefined(vars map[string]string) bool {
 	return true
 }
 
-// vlaidate returns false if the contract is violated.
+// validate returns false if the contract is violated.
 func (c Contract) validate(interpreter *interp.Interpreter) (bool, error) {
 	res, err := safeEval(interpreter, c.Condition)
 	if err != nil {
@@ -100,12 +103,20 @@ func foldConstant(nIdent *ast.Ident, info *types.Info) string {
 	return constType.Value.ExactString()
 }
 
-func extractMessage(nBody *ast.BlockStmt) string {
+// extractMessage extracts error message for the contract.
+//
+// The first result value is the extraccted error message
+// which might be empty if it cannot be extracted.
+//
+// The second result value tells if the given code block
+// is an error of some kind typical for a contract.
+// A contract must either panic or return an error as one of the return values.
+func extractMessage(nBody *ast.BlockStmt, info *types.Info) (string, bool) {
 	if nBody.List == nil {
-		return ""
+		return "", false
 	}
 	if len(nBody.List) != 1 {
-		return ""
+		return "", false
 	}
 	nStmt := nBody.List[0]
 
@@ -115,33 +126,37 @@ func extractMessage(nBody *ast.BlockStmt) string {
 		return extractMessageFromPanic(nExpr)
 	}
 
-	return ""
+	nRet, ok := nStmt.(*ast.ReturnStmt)
+	if ok {
+		return extractMessageFromReturn(nRet, info)
+	}
+	return "", false
 }
 
-func extractMessageFromPanic(nExpr *ast.ExprStmt) string {
+func extractMessageFromPanic(nExpr *ast.ExprStmt) (string, bool) {
 	// check if the expression is a "panic"
 	if nExpr.X == nil {
-		return ""
+		return "", false
 	}
 	nCall, ok := nExpr.X.(*ast.CallExpr)
 	if !ok {
-		return ""
+		return "", false
 	}
 	if nCall.Fun == nil {
-		return ""
+		return "", false
 	}
 	nIdent, ok := nCall.Fun.(*ast.Ident)
 	if !ok {
-		return ""
+		return "", false
 	}
 	if nIdent.Name != "panic" {
-		return ""
+		return "", false
 	}
 	if nCall.Args == nil {
-		return ""
+		return "", false
 	}
 	if len(nCall.Args) != 1 {
-		return ""
+		return "", false
 	}
 
 	// extract the error message
@@ -149,12 +164,28 @@ func extractMessageFromPanic(nExpr *ast.ExprStmt) string {
 	nLit, ok := nArg.(*ast.BasicLit)
 	if ok {
 		if nLit.Kind == token.STRING {
-			return strings.Trim(nLit.Value, `"`)
+			return strings.Trim(nLit.Value, `"`), true
 		}
-		return nLit.Value
+		return nLit.Value, true
 	}
+	return "", true
+}
 
-	return ""
+func extractMessageFromReturn(nRet *ast.ReturnStmt, info *types.Info) (string, bool) {
+	if nRet.Results == nil {
+		return "", false
+	}
+	for _, nExpr := range nRet.Results {
+		exprType, ok := info.Types[nExpr]
+		if !ok {
+			continue
+		}
+		if exprType.Type.String() == "error" {
+			// TODO: get the error message from fmt.Errorf and alike
+			return "", true
+		}
+	}
+	return "", false
 }
 
 // safeEval evals the expression using the interpreter and catches panics.

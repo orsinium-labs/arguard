@@ -12,5 +12,11 @@ func F1(in int) error {
 	if in == 2 { // want "contract: 42"
 		panic(42)
 	}
+
+	// not a contract
+	if in == 4 {
+		println(in)
+	}
+
 	return nil
 }
