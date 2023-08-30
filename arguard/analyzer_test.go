@@ -38,10 +38,10 @@ func TestSmoke(t *testing.T) {
 
 	packages := []string{
 		"sync",
-		// "flag",
-		// "os",
-		// "fmt",
-		// "go/ast",
+		"flag",
+		"os",
+		"fmt",
+		"go/ast",
 	}
 	for _, pkgName := range packages {
 		pkgName := pkgName

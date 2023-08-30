@@ -14,6 +14,7 @@ import (
 type Contract struct {
 	Pos       token.Pos // contract position, used for positioning debug messages
 	Condition string    // valid Go-syntax expression which if true, the contract is violated
+	Names     []string  // unbound variables used by the condition
 	Message   string    // error message to show on contract failure
 }
 
@@ -22,7 +23,7 @@ func contractFromAST(node ast.Node, info *types.Info) *Contract {
 	if !ok {
 		return nil
 	}
-	cond, err := extractCondition(nIf.Cond, info)
+	cond, names, err := extractCondition(nIf.Cond, info)
 	if err != nil {
 		return nil
 	}
@@ -30,7 +31,19 @@ func contractFromAST(node ast.Node, info *types.Info) *Contract {
 	if msg == "" {
 		msg = "should be false: " + cond
 	}
-	return &Contract{node.Pos(), cond, msg}
+	return &Contract{node.Pos(), cond, names, msg}
+}
+
+// allDefined checks if vars define all unbound variables
+// needed to execute the contract.
+func (c Contract) allDefined(vars map[string]string) bool {
+	for _, name := range c.Names {
+		_, defined := vars[name]
+		if !defined {
+			return false
+		}
+	}
+	return true
 }
 
 // vlaidate returns false if the contract is violated.
@@ -49,28 +62,30 @@ func (c Contract) validate(interpreter *interp.Interpreter) (bool, error) {
 // extractCondition converts the given AST expression into a valid Go syntax string.
 //
 // Returns an error for unsupported or not safe to execute expressions.
-func extractCondition(expr ast.Expr, info *types.Info) (string, error) {
+func extractCondition(expr ast.Expr, info *types.Info) (string, []string, error) {
 	switch v := expr.(type) {
 	case *ast.BinaryExpr:
-		left, err := extractCondition(v.X, info)
+		lExpr, lNames, err := extractCondition(v.X, info)
 		if err != nil {
-			return "", err
+			return "", nil, err
 		}
-		right, err := extractCondition(v.Y, info)
+		rExpr, rNames, err := extractCondition(v.Y, info)
 		if err != nil {
-			return "", err
+			return "", nil, err
 		}
-		return fmt.Sprintf("%s %s %s", left, v.Op.String(), right), nil
+		cond := fmt.Sprintf("%s %s %s", lExpr, v.Op.String(), rExpr)
+		names := append(lNames, rNames...)
+		return cond, names, nil
 	case *ast.BasicLit:
-		return v.Value, nil
+		return v.Value, nil, nil
 	case *ast.Ident:
 		folded := foldConstant(v, info)
-		if folded == "" {
-			folded = v.Name
+		if folded != "" {
+			return folded, nil, nil
 		}
-		return folded, nil
+		return v.Name, []string{v.Name}, nil
 	default:
-		return "", fmt.Errorf("unsupported node: %v", expr)
+		return "", nil, fmt.Errorf("unsupported node: %v", expr)
 	}
 }
 

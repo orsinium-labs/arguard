@@ -90,6 +90,9 @@ func (fn Function) Validate(vars map[string]string) (*Contract, error) {
 	// check all contracts
 	var firstErr error = nil
 	for _, c := range fn.Contracts {
+		if !c.allDefined(vars) {
+			continue
+		}
 		valid, err := c.validate(interpreter)
 		if err != nil {
 			if firstErr == nil {
