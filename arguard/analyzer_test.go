@@ -18,6 +18,7 @@ func TestAll(t *testing.T) {
 	}
 
 	cConfig := contracts.NewConfig()
+	cConfig.ReportContracts = true
 	cAnalyzer := contracts.NewAnalyzer(cConfig)
 	aConfig := arguard.NewConfig()
 	aAnalyzer := arguard.NewAnalyzer(aConfig, &cAnalyzer)

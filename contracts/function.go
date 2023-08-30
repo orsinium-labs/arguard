@@ -113,21 +113,9 @@ func getFuncArgs(nFunc *ast.FuncDecl) []string {
 	}
 	res := make([]string, 0)
 	for _, nField := range nFunc.Type.Params.List {
-		argName := fieldToName(nField)
-		if argName != "" {
-			res = append(res, argName)
+		for _, nIdent := range nField.Names {
+			res = append(res, nIdent.Name)
 		}
 	}
 	return res
-}
-
-func fieldToName(nField *ast.Field) string {
-	if nField.Names == nil {
-		return ""
-	}
-	if len(nField.Names) != 1 {
-		return ""
-	}
-	nIdent := nField.Names[0]
-	return nIdent.Name
 }

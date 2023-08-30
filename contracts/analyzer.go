@@ -16,10 +16,10 @@ import (
 type Result map[*types.Func]*Function
 
 func NewAnalyzer(config Config) analysis.Analyzer {
-	analyzer := analyzer{config}
+	analyzer := analyzer{&config}
 	return analysis.Analyzer{
 		Name:       "contracts",
-		Doc:        "extract conditions that function arguments must satisfy",
+		Doc:        "extracts conditions that function arguments must satisfy",
 		Run:        analyzer.run,
 		ResultType: reflect.TypeOf((Result)(nil)),
 		Flags:      *config.flagSet(),
@@ -27,7 +27,7 @@ func NewAnalyzer(config Config) analysis.Analyzer {
 }
 
 type analyzer struct {
-	config Config
+	config *Config
 }
 
 // run is the entry point for the analyzer.

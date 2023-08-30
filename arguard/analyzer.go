@@ -14,10 +14,10 @@ func NewAnalyzer(
 	config Config,
 	contractsAnalyzer *analysis.Analyzer,
 ) *analysis.Analyzer {
-	a := analyzer{config, contractsAnalyzer}
+	a := analyzer{&config, contractsAnalyzer}
 	return &analysis.Analyzer{
-		Name:     "gosafe",
-		Doc:      "finds code that will fail",
+		Name:     "arguard",
+		Doc:      "statically finds function calls that will fail in runtime",
 		Run:      a.run,
 		Requires: []*analysis.Analyzer{contractsAnalyzer},
 		Flags:    *config.flagSet(),
@@ -25,7 +25,7 @@ func NewAnalyzer(
 }
 
 type analyzer struct {
-	config    Config
+	config    *Config
 	contracts *analysis.Analyzer
 }
 
@@ -50,7 +50,7 @@ func (a analyzer) run(pass *analysis.Pass) (any, error) {
 }
 
 type fileAnalyzer struct {
-	config Config
+	config *Config
 	funcs  contracts.Result
 	pass   *analysis.Pass
 	file   *ast.File
