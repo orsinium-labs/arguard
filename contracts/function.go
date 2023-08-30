@@ -3,6 +3,7 @@ package contracts
 import (
 	"fmt"
 	"go/ast"
+	"go/types"
 
 	"github.com/traefik/yaegi/interp"
 	"github.com/traefik/yaegi/stdlib"
@@ -15,13 +16,13 @@ type Function struct {
 
 func (*Function) AFact() {}
 
-func functionFromAST(nFunc *ast.FuncDecl) *Function {
+func functionFromAST(nFunc *ast.FuncDecl, info *types.Info) *Function {
 	if nFunc.Body == nil {
 		return nil
 	}
 	contracts := make([]Contract, 0)
 	for _, stmt := range nFunc.Body.List {
-		contract := contractFromAST(stmt)
+		contract := contractFromAST(stmt, info)
 		if contract == nil {
 			break
 		}

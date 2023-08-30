@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"go/types"
 	"strings"
 
 	"github.com/traefik/yaegi/interp"
@@ -15,12 +16,12 @@ type Contract struct {
 	Message   string    // error message to show on contract failure
 }
 
-func contractFromAST(node ast.Node) *Contract {
+func contractFromAST(node ast.Node, info *types.Info) *Contract {
 	nIf, ok := node.(*ast.IfStmt)
 	if !ok {
 		return nil
 	}
-	cond, err := extractCondition(nIf.Cond)
+	cond, err := extractCondition(nIf.Cond, info)
 	if err != nil {
 		return nil
 	}
@@ -47,14 +48,14 @@ func (c Contract) validate(interpreter *interp.Interpreter) (bool, error) {
 // extractCondition converts the given AST expression into a valid Go syntax string.
 //
 // Returns an error for unsupported or not safe to execute expressions.
-func extractCondition(expr ast.Expr) (string, error) {
+func extractCondition(expr ast.Expr, info *types.Info) (string, error) {
 	switch v := expr.(type) {
 	case *ast.BinaryExpr:
-		left, err := extractCondition(v.X)
+		left, err := extractCondition(v.X, info)
 		if err != nil {
 			return "", err
 		}
-		right, err := extractCondition(v.Y)
+		right, err := extractCondition(v.Y, info)
 		if err != nil {
 			return "", err
 		}
@@ -62,10 +63,25 @@ func extractCondition(expr ast.Expr) (string, error) {
 	case *ast.BasicLit:
 		return v.Value, nil
 	case *ast.Ident:
-		return v.Name, nil
+		folded := foldConstant(v, info)
+		if folded == "" {
+			folded = v.Name
+		}
+		return folded, nil
 	default:
 		return "", fmt.Errorf("unsupported node: %v", expr)
 	}
+}
+
+func foldConstant(nIdent *ast.Ident, info *types.Info) string {
+	constType, ok := info.Types[nIdent]
+	if !ok {
+		return ""
+	}
+	if constType.Value == nil {
+		return ""
+	}
+	return constType.Value.ExactString()
 }
 
 func extractMessage(nBody *ast.BlockStmt) string {

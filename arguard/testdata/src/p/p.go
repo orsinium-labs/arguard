@@ -1,5 +1,7 @@
 package p
 
+const FIVE = 5
+
 func F1(in int) {
 	if in == 0 {
 		panic("must not be zero")
@@ -19,6 +21,9 @@ func F3(x, y int) {
 	if y == 2 {
 		panic("y is two")
 	}
+	if x == FIVE {
+		panic("x is five")
+	}
 }
 
 func F4(in int) {
@@ -30,4 +35,5 @@ func F4(in int) {
 	F3(1, in) // want "contract violated: x is one"
 	F3(in, 2) // want "contract violated: y is two"
 	F3(1, 2)  // want "contract violated: x is one"
+	F3(5, in) // want "contract violated: x is five"
 }
