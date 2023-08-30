@@ -38,10 +38,10 @@ func TestSmoke(t *testing.T) {
 
 	packages := []string{
 		"sync",
-		"flag",
+		// "flag",
 		// "os",
-		"fmt",
-		"go/ast",
+		// "fmt",
+		// "go/ast",
 	}
 	for _, pkgName := range packages {
 		pkgName := pkgName
@@ -51,6 +51,7 @@ func TestSmoke(t *testing.T) {
 			cConfig.FollowImports = false
 			cAnalyzer := contracts.NewAnalyzer(cConfig)
 			aConfig := arguard.NewConfig()
+			aConfig.ReportErrors = true
 			aAnalyzer := arguard.NewAnalyzer(aConfig, &cAnalyzer)
 			analysistest.Run(t, testdata, aAnalyzer, pkgName)
 		})

@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"reflect"
 	"strings"
 
 	"github.com/traefik/yaegi/interp"
@@ -34,7 +35,7 @@ func contractFromAST(node ast.Node, info *types.Info) *Contract {
 
 // vlaidate returns false if the contract is violated.
 func (c Contract) validate(interpreter *interp.Interpreter) (bool, error) {
-	res, err := interpreter.Eval(c.Condition)
+	res, err := safeEval(interpreter, c.Condition)
 	if err != nil {
 		return false, fmt.Errorf("evaluate condition: %v", err)
 	}
@@ -139,4 +140,15 @@ func extractMessageFromPanic(nExpr *ast.ExprStmt) string {
 	}
 
 	return ""
+}
+
+// safeEval evals the expression using the interpreter and catches panics.
+func safeEval(i *interp.Interpreter, expr string) (res reflect.Value, err error) {
+	defer func() {
+		failure := recover()
+		if failure != nil {
+			err = fmt.Errorf("panic: %v", failure)
+		}
+	}()
+	return i.Eval(expr)
 }
