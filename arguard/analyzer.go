@@ -5,7 +5,7 @@ import (
 	"go/ast"
 	"go/types"
 
-	"github.com/orsinium-labs/gosafe/contracts"
+	"github.com/orsinium-labs/arguard/contracts"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/types/typeutil"
 )

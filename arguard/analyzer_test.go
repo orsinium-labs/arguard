@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/orsinium-labs/gosafe/arguard"
-	"github.com/orsinium-labs/gosafe/contracts"
+	"github.com/orsinium-labs/arguard/arguard"
+	"github.com/orsinium-labs/arguard/contracts"
 	"golang.org/x/tools/go/analysis/analysistest"
 )
 

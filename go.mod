@@ -1,4 +1,4 @@
-module github.com/orsinium-labs/gosafe
+module github.com/orsinium-labs/arguard
 
 go 1.20
 
