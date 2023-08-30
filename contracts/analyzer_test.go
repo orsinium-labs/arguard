@@ -20,7 +20,7 @@ func TestAll(t *testing.T) {
 	config.ReportContracts = true
 	config.FollowImports = false
 	analyzer := contracts.NewAnalyzer(config)
-	analysistest.Run(t, testdata, &analyzer, "p")
+	analysistest.Run(t, testdata, analyzer, "p")
 }
 
 func TestImports(t *testing.T) {
@@ -32,7 +32,7 @@ func TestImports(t *testing.T) {
 	testdata := filepath.Join(wd, "testdata")
 	config := contracts.NewConfig()
 	analyzer := contracts.NewAnalyzer(config)
-	analysistest.Run(t, testdata, &analyzer, "i")
+	analysistest.Run(t, testdata, analyzer, "i")
 }
 
 // Run the linter on random stdlib packages and see if it explodes.
@@ -58,7 +58,7 @@ func TestSmoke(t *testing.T) {
 			config := contracts.NewConfig()
 			config.FollowImports = false
 			analyzer := contracts.NewAnalyzer(config)
-			analysistest.Run(t, testdata, &analyzer, pkgName)
+			analysistest.Run(t, testdata, analyzer, pkgName)
 		})
 	}
 }

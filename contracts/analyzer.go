@@ -15,9 +15,9 @@ import (
 
 type Result map[*types.Func]*Function
 
-func NewAnalyzer(config Config) analysis.Analyzer {
+func NewAnalyzer(config Config) *analysis.Analyzer {
 	analyzer := analyzer{&config}
-	return analysis.Analyzer{
+	return &analysis.Analyzer{
 		Name:       "contracts",
 		Doc:        "extracts conditions that function arguments must satisfy",
 		Run:        analyzer.run,

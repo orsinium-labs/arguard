@@ -21,7 +21,7 @@ func TestAll(t *testing.T) {
 	cConfig.ReportContracts = true
 	cAnalyzer := contracts.NewAnalyzer(cConfig)
 	aConfig := arguard.NewConfig()
-	aAnalyzer := arguard.NewAnalyzer(aConfig, &cAnalyzer)
+	aAnalyzer := arguard.NewAnalyzer(aConfig, cAnalyzer)
 
 	testdata := filepath.Join(wd, "testdata")
 	analysistest.Run(t, testdata, aAnalyzer, "p")
@@ -52,7 +52,7 @@ func TestSmoke(t *testing.T) {
 			cAnalyzer := contracts.NewAnalyzer(cConfig)
 			aConfig := arguard.NewConfig()
 			aConfig.ReportErrors = true
-			aAnalyzer := arguard.NewAnalyzer(aConfig, &cAnalyzer)
+			aAnalyzer := arguard.NewAnalyzer(aConfig, cAnalyzer)
 			analysistest.Run(t, testdata, aAnalyzer, pkgName)
 		})
 	}
