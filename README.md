@@ -8,10 +8,10 @@ Let's say, you have the following function:
 
 ```go
 func div(n, d float64) float64 {
-  if in == 0 {
+  if d == 0 {
     panic("denominator must not be zero")
   }
-  return n /d
+  return n / d
 }
 ```
 
