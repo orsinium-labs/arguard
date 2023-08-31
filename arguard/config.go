@@ -16,7 +16,7 @@ func (c *Config) flagSet() *flag.FlagSet {
 	fs := flag.NewFlagSet("contracts", flag.ExitOnError)
 	fs.BoolVar(
 		&c.ReportErrors, "report-errors", c.ReportErrors,
-		"show errors occuring during contract execution",
+		"show errors occurring during contract execution",
 	)
 	return fs
 }

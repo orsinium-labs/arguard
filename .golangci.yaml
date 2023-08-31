@@ -1,0 +1,21 @@
+linters:
+  disable:
+    - dupword
+    - depguard
+    - godot
+    - godox
+    - errorlint
+  presets:
+    - bugs
+    - comment
+    - complexity
+    # - error
+    - format
+    - import
+    # - metalinter
+    # - module
+    - performance
+    # - sql
+    # - style
+    # - test
+    - unused
