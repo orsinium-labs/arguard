@@ -70,6 +70,11 @@ func analyzeImports(facts Result, pass *analysis.Pass) {
 			pkg, err := loadPackageInfo(importPath)
 			if err != nil {
 				pass.Reportf(nImport.Pos(), "load package info: %v", err)
+				continue
+			}
+			if pkg.TypesInfo == nil {
+				pass.Reportf(nImport.Pos(), "package loaded without NeedTypesInfo flag")
+				continue
 			}
 			exportFacts(facts, pkg.TypesInfo, pkg.Syntax)
 		}
@@ -77,11 +82,7 @@ func analyzeImports(facts Result, pass *analysis.Pass) {
 }
 
 func loadPackageInfo(pkgName string) (*packages.Package, error) {
-	loadMode := (packages.NeedName |
-		packages.NeedSyntax |
-		packages.NeedDeps |
-		packages.NeedTypes |
-		packages.NeedTypesInfo)
+	loadMode := packages.NeedName | packages.NeedTypes | packages.NeedTypesInfo
 	cfg := &packages.Config{Mode: loadMode}
 	pkgs, err := packages.Load(cfg, string(pkgName))
 	if err != nil {
